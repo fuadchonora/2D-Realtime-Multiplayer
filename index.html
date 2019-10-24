@@ -1,15 +1,152 @@
-<canvas id="ctx" width="500" height="500" style="border:1px solid #000000;"></canvas>
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<style>
+canvas {
+    border:1px solid #d3d3d3;
+    background-color: #f1f1f1;
+}
+</style>
+</head>
+<body onload="startGame()">
+
+    <canvas id="newctx" width="500" height="500" style="border:1px solid #000000;"></canvas>
+
 
 <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
 <script>
-    var ctx = document.getElementById("ctx").getContext("2d");
-    ctx.font = '30px Arial';
 
-    var socket = io();
+var newctx = document.getElementById("newctx").getContext("2d");
+newctx.font = '30px Arial';
 
-    socket.on('newPositions',function(data){
-        ctx.clearRect(0,0,500,500);
-        for(var i = 0 ; i < data.length; i++)
-            ctx.fillText(data[i].number,data[i].x,data[i].y);
-    });
+var playerLIst = {};
+
+var myGamePiece;
+var socket = io();
+
+// io.on('assignUser',function(data){
+//     var userId = ''+data.userId;
+//     myGamePiece[userId].id = userId;
+// })
+
+function startGame() {
+    myGamePiece= new component(30, 30, "red", 10, 120);
+    myGameArea.start();
+}
+
+var myGameArea = {
+    canvas : document.createElement("canvas"),
+    start : function() {
+        this.canvas.width = 500;
+        this.canvas.height = 500;
+        this.context = this.canvas.getContext("2d");
+        document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+        this.interval = setInterval(updateGameArea, 20);
+    },
+    clear : function() {
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+}
+
+function component(width, height, color, x, y) {
+    this.width = width;
+    this.height = height;
+    this.speedX = 0;
+    this.speedY = 0;
+    this.x = x;
+    this.y = y;    
+    this.update = function() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+
+        socket.emit('newPosition',{x:this.x,y:this.y})
+
+        ctx = myGameArea.context;
+        ctx.fillStyle = color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
+}
+
+socket.on('updatePositions',function(data){
+    newctx.clearRect(0,0,500,500);
+    for(var i = 0 ; i < data.length; i++)
+        //newctx.fillText(data[i].number+5,data[i].x+5,data[i].y);
+        //newctx.fillStyle = "red";
+        newctx.fillRect(data[i].x, data[i].y, 30, 30);
+});
+
+function updateGameArea() {
+    myGameArea.clear();
+    myGamePiece.update();
+}
+
+function moveup() {
+	if(myGamePiece.speedY>-1)
+    	myGamePiece.speedY -= 1; 
+}
+
+function movedown() {
+	if(myGamePiece.speedY<1)
+    	myGamePiece.speedY += 1; 
+}
+
+function moveleft() {
+	if(myGamePiece.speedX>-1)
+    	myGamePiece.speedX -= 1; 
+}
+
+function moveright() {
+	if(myGamePiece.speedX<1)
+    	myGamePiece.speedX += 1; 
+}
+
+
+
+document.addEventListener('keydown', (event) => {
+  switch(event.keyCode){
+    case 37:
+        moveleft();
+        break;
+    case 38:
+        moveup() ;
+        break;
+    case 39:
+        moveright();
+        break;
+    case 40:
+        movedown();
+        break;
+  }
+
+}, false);
+
+document.addEventListener('keyup', (event) => {
+  switch(event.keyCode){
+    case 37:
+        moveright();
+        break;
+    case 38:
+        movedown();
+        break;
+    case 39:
+        moveleft();
+        break;
+    case 40:
+        moveup();
+        break;
+  }
+
+}, false);
+
 </script>
+<div style="text-align:center;width:480px;">
+  <button onclick="moveup()">UP</button><br><br>
+  <button onclick="moveleft()">LEFT</button>
+  <button onclick="moveright()">RIGHT</button><br><br>
+  <button onclick="movedown()">DOWN</button>
+</div>
+
+<p></p>
+</body>
+</html>
