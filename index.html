@@ -9,7 +9,9 @@ canvas {
 }
 </style>
 </head>
+
 <body onload="startGame()">
+
 
     <canvas id="newctx" width="500" height="500" style="border:1px solid #000000;"></canvas>
 
@@ -20,15 +22,58 @@ canvas {
 var newctx = document.getElementById("newctx").getContext("2d");
 newctx.font = '30px Arial';
 
+var myData = {};
 var playerLIst = {};
 
 var myGamePiece;
 var socket = io();
 
-// io.on('assignUser',function(data){
-//     var userId = ''+data.userId;
-//     myGamePiece[userId].id = userId;
-// })
+socket.on('registerUser',function(data){
+    myData.id = data.id;
+})
+
+function invitePlayer(opId){
+    console.log(opId);
+    socket.emit('invitePlayer',{opId:opId});
+}
+function leaveRoom(){
+    socket.emit('leaveRoom');
+    newctx.clearRect(0,0,500,500);
+}
+
+socket.on('invitation',function(data){
+    document.getElementById('log').innerHTML = "New Invitation";
+    var popup = confirm(data.opId+" Invited You!");
+    if (popup == true) {
+        socket.emit('createRoom',{opId:data.opId})
+    } else {
+        document.getElementById('log').innerHTML = "You Rejected the Invitation";
+        socket.emit('invitationReject',{opId:data.opId})
+    }
+})
+
+socket.on('invitationReject',function(){
+    alert('Invitation Rejected!');
+})
+
+
+socket.on('updateList',function(data){
+    var showList = document.getElementById('ha');
+    var showPlayers = "<br>Players Online<br>";
+    for(var i in data){
+        if(myData.id == data[i].id){
+            showPlayers = "My Data<br>"+data[i].id+" | "+data[i].x+" | "+data[i].y+" | "+data[i].status+"<br>"+showPlayers;
+            myData.status = data[i].status;
+        }else{
+            showPlayers = showPlayers+data[i].id+" | "+data[i].x+" | "+data[i].y+" | "+data[i].status;
+            if((data[i].status === 'in-online') && (myData.status!='in-room')){
+                showPlayers = showPlayers+" <button onclick=\"invitePlayer("+data[i].id+")\">Invite</button>"
+            }
+            showPlayers = showPlayers+"<br>";
+        }
+    }
+    showList.innerHTML=showPlayers;
+})
 
 function startGame() {
     myGamePiece= new component(30, 30, "red", 10, 120);
@@ -146,7 +191,10 @@ document.addEventListener('keyup', (event) => {
   <button onclick="moveright()">RIGHT</button><br><br>
   <button onclick="movedown()">DOWN</button>
 </div>
+<br><button onclick="leaveRoom()">Leave</button><br>
 
-<p></p>
+<p id='ha'>Loading Players...</p>
+<br>
+<p id='log'>Logs</p>
 </body>
 </html>
